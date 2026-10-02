@@ -1,3 +1,11 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
 <title>FCA Securities Quiz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,6 +37,7 @@
   --shadow:0 14px 40px -22px rgba(20,30,50,.25); color-scheme:light; }
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -98,6 +107,14 @@ input[type=range]::-moz-range-track{height:8px;border-radius:999px;background:li
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--surface);border:3px solid var(--accent);margin-top:-10px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--surface);border:3px solid var(--accent)}
 .presets,.chips,.seg{display:flex;flex-wrap:wrap;gap:8px}
+.chapters{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+.chap{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 10px;font-size:13px;color:var(--muted)}
+.chap:hover{color:var(--fg);border-color:var(--line-2)}
+.chap .cn{font-size:11px;color:var(--accent)}
+.chap .ct{min-width:0;font-weight:600}
+.chap .cq{font-size:11px;opacity:.75}
+.chap[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.chap[aria-pressed="true"] .ct::after{content:" ✓";color:var(--accent)}
 .chip{border:1px solid var(--line-2);background:transparent;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--muted)}
 .chip:hover{color:var(--fg)}
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
@@ -323,7 +340,9 @@ function stats(a){
   return {n:a.qids.length, answered, correct, pct: answered? Math.round(correct/answered*100) : null};
 }
 function poolFor(sections){ const set=new Set(sections); const out=[]; QS.forEach((q,i)=>{ if(!set.size || set.has(q.s)) out.push(i); }); return out; }
-function sectionLabel(secs){ if(!secs || !secs.length || secs.length===SECTIONS.length) return 'Tous les tests'; return 'Test'+(secs.length>1?'s ':' ')+secs.slice().sort((a,b)=>a-b).join(', '); }
+const CHAPTERS={1:'The Financial Services Industry',2:'Asset Classes - Equities',3:'Asset Classes - Debt Types and Features',4:'Asset Classes - Debt Valuation',5:'Asset Classes - Other Asset Classes',6:'Asset Classes - Collective Investment Schemes',7:'Primary Markets',8:'Secondary Markets',9:'Corporate Actions',10:'Clearing and Settlement',11:'Accounting Analysis',12:'Financial Statement Analysis',13:'Investment Management'};
+const chName = s => CHAPTERS[s] || ('Chapitre '+s);
+function sectionLabel(secs){ if(!secs || !secs.length || secs.length===SECTIONS.length) return 'Tous les chapitres'; if(secs.length===1) return 'Ch. '+secs[0]+' · '+chName(secs[0]); return 'Chapitres '+secs.slice().sort((a,b)=>a-b).join(', '); }
 function fmtDate(t){ const d=new Date(t); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function fmtDur(ms){ const m=Math.round(ms/60000); if(m<1) return '< 1 min'; if(m<60) return m+' min'; return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0'); }
 function pillCls(p){ return p==null?'m': p>=80?'g': p>=60?'m':'r'; }
@@ -379,7 +398,7 @@ function renderHome(){
   <section class="hero">
     <span class="eyebrow">Révision · Securities</span>
     <h1>Fitch competency <em>tests</em></h1>
-    <p>${QS.length} questions officielles du fichier, réparties sur ${SECTIONS.length} tests. Choisis combien tu veux en faire et lance-toi.</p>
+    <p>${QS.length} questions officielles du fichier, réparties sur ${SECTIONS.length} chapitres. Choisis combien tu veux en faire et lance-toi.</p>
   </section>
   ${cur ? `<div class="card resume">
     <div class="txt"><span class="eyebrow">Tentative en cours</span>
@@ -399,11 +418,11 @@ function renderHome(){
         <div class="presets">${[10,25,50,100].filter(v=>v<max).map(v=>`<button class="chip" data-preset="${v}">${v}</button>`).join('')}<button class="chip" data-preset="${max}">Toutes (${max})</button></div>
       </div>
       <div class="field">
-        <span class="eyebrow">Tests inclus</span>
-        <div class="chips" id="secChips">
-          <button class="chip" data-sec="all" aria-pressed="${!P.sections.length}">Tous<span class="n">${QS.length}</span></button>
-          ${SECTIONS.map(s=>`<button class="chip" data-sec="${s}" aria-pressed="${P.sections.includes(s)}">Test ${s}<span class="n">${QS.filter(q=>q.s===s).length}</span></button>`).join('')}
+        <div class="field-head"><span class="eyebrow">Chapitres inclus</span><button class="chip" data-sec="all" aria-pressed="${!P.sections.length}">Tous<span class="n">${QS.length}</span></button></div>
+        <div class="chapters" id="secChips">
+          ${SECTIONS.map(s=>`<button class="chap" data-sec="${s}" aria-pressed="${P.sections.includes(s)}"><span class="cn mono">${String(s).padStart(2,'0')}</span><span class="ct">${esc(chName(s))}</span><span class="cq mono">${QS.filter(q=>q.s===s).length}</span></button>`).join('')}
         </div>
+        <p class="hint">Aucun chapitre coché = tous les chapitres. Coche-en un ou plusieurs pour cibler tes révisions.</p>
       </div>
       <div class="field">
         <span class="eyebrow">Ordre</span>
@@ -478,7 +497,7 @@ function renderQuiz(){
     <article class="card qcard" id="qcard">
       <div class="qmeta">
         <span class="qnum">Question ${p+1}<small> / ${n}</small></span>
-        <span class="tag">Test ${q.s} · Q${q.n}</span><span class="tag">[${esc(q.id)}]</span>
+        <span class="tag">Ch. ${q.s} · ${esc(chName(q.s))} · Q${q.n}</span><span class="tag">[${esc(q.id)}]</span>
         ${reviewing?'<span class="review-banner">Mode revue</span>':''}
       </div>
       <div class="stem">${q.q}</div>
@@ -591,3 +610,6 @@ render();
 initRemote();
 })();
 </script>
+
+</body>
+</html>
