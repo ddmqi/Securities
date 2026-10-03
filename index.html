@@ -210,6 +210,9 @@ td.sc{font-weight:800}
 .empty-filter{font-size:13px;color:var(--muted);padding:10px 0}
 
 /* Mocks */
+.mock-opts{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding:16px 20px;margin-bottom:14px;box-shadow:none}
+.mock-opts .hint{margin:4px 0 0}
+.mock-opts .chip[aria-pressed="true"]::before{content:"✓ ";color:var(--accent)}
 .mocks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-bottom:20px}
 .mock{padding:20px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
 .mock.live{border-color:color-mix(in srgb,var(--accent) 60%,var(--line))}
@@ -217,8 +220,8 @@ td.sc{font-weight:800}
 .mock-t{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .mock h3{margin:0;font-size:16px}
 .mock .sub{font-size:12px;color:var(--muted)}
-.mock dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0}
-.mock dl div{background:var(--surface-2);border-radius:10px;padding:8px 10px}
+.mock dl{display:grid;gap:4px;margin:0}
+.mock dl div{background:var(--surface-2);border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .mock dt{font-size:10px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;color:var(--muted)}
 .mock dd{margin:0;font-weight:800;font-variant-numeric:tabular-nums}
 .mock .btn{width:100%;margin-top:auto}
@@ -414,6 +417,8 @@ function fmtDate(t){ const d=new Date(t); return d.toLocaleDateString('fr-FR',{d
 function fmtDur(ms){ const m=Math.round(ms/60000); if(m<1) return '< 1 min'; if(m<60) return m+' min'; return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0'); }
 function pillCls(p){ return p==null?'m': p>=80?'g': p>=60?'m':'r'; }
 function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function optOrder(a,p,q){ const pm = a && a.perm && a.perm[p]; return pm ? pm.split('') : q.o.map(o=>o.l); }
+function dispL(a,p,q,orig){ const i=optOrder(a,p,q).indexOf(orig); return i<0 ? orig : 'ABCD'[i]; }
 function att(){ return reviewing ? M().last : M().current; }
 
 /* ---------- modal ---------- */
@@ -571,16 +576,17 @@ function renderQuiz(){
       </div>
       <div class="stem">${q.q}</div>
       <div class="opts">
-        ${q.o.map(o=>{ let cls='', ico='';
+        ${optOrder(a,p,q).map((ol,i)=>q.o.find(o=>o.l===ol)).map((o,i)=>{ let cls='', ico=''; const DL='ABCD'[i];
           if(done){ if(o.l===q.a){cls='ok';ico='✓';} else if(o.l===chosen){cls='ko';ico='✕';} else cls='dim'; }
-          return `<button class="opt ${cls} ${cls==='ko'&&lastAnimPos===p?'anim':''}" data-l="${o.l}" ${done||reviewing?'disabled':''}><span class="L">${o.l}</span><span class="T">${o.h}</span><span class="ico">${ico}</span></button>`; }).join('')}
+          return `<button class="opt ${cls} ${cls==='ko'&&lastAnimPos===p?'anim':''}" data-l="${o.l}" ${done||reviewing?'disabled':''}><span class="L">${DL}</span><span class="T">${o.h}</span><span class="ico">${ico}</span></button>`; }).join('')}
       </div>
       ${done ? `<div class="expl">
-        <div class="verdict ${chosen===q.a?'g':'r'}">${chosen===q.a?'✓ Bonne réponse':'✕ Mauvaise réponse — tu as choisi '+chosen}</div>
-        ${a.kind==='book' ? `<h4>Corrigé</h4><div class="expl-body book">${q.e}</div>` : `<p class="ans-line">The correct answer is: <strong>${q.a}</strong> - ${esc(plain(correctOpt.h))}</p>
+        <div class="verdict ${chosen===q.a?'g':'r'}">${chosen===q.a?'✓ Bonne réponse':'✕ Mauvaise réponse — tu as choisi '+dispL(a,p,q,chosen)}</div>
+        ${a.kind==='book' ? `<h4>Corrigé</h4><div class="expl-body book">${q.e}</div>` : `<p class="ans-line">The correct answer is: <strong>${dispL(a,p,q,q.a)}</strong> - ${esc(plain(correctOpt.h))}</p>
         <h4>Explanation</h4>
-        <div class="expl-body">${q.e && q.e.trim() ? q.e : '<p class="none">Aucune explication dans le fichier source pour cette question.</p>'}</div>`}
-      </div>` : (reviewing && a.kind==='book' ? `<div class="expl"><p class="ans-line">Non répondue.</p><h4>Corrigé</h4><div class="expl-body book">${q.e}</div></div>` : reviewing ? `<div class="expl"><p class="ans-line">Non répondue. The correct answer is: <strong>${q.a}</strong> - ${esc(plain(correctOpt.h))}</p><h4>Explanation</h4><div class="expl-body">${q.e && q.e.trim()?q.e:'<p class="none">Aucune explication dans le fichier source pour cette question.</p>'}</div></div>`:'')}
+        <div class="expl-body">${q.e && q.e.trim() ? q.e : '<p class="none">Aucune explication dans le fichier source pour cette question.</p>'}</div>
+        ${a.perm ? `<p class="hint" style="margin-top:8px">Réponses mélangées : dans le fichier, la bonne réponse est la ${q.a}.</p>` : ''}`}
+      </div>` : (reviewing && a.kind==='book' ? `<div class="expl"><p class="ans-line">Non répondue.</p><h4>Corrigé</h4><div class="expl-body book">${q.e}</div></div>` : reviewing ? `<div class="expl"><p class="ans-line">Non répondue. The correct answer is: <strong>${dispL(a,p,q,q.a)}</strong> - ${esc(plain(correctOpt.h))}</p><h4>Explanation</h4><div class="expl-body">${q.e && q.e.trim()?q.e:'<p class="none">Aucune explication dans le fichier source pour cette question.</p>'}</div></div>`:'')}
       <div class="qfoot">
         <button class="btn" id="prevBtn" ${p===0?'disabled':''}>← Précédente</button>
         <button class="btn ${done&&p<n-1?'primary':''}" id="nextBtn" ${p===n-1?'disabled':''}>Suivante →</button>
@@ -672,10 +678,15 @@ function mockStats(k){
   const hs=S.mock.history.filter(h=>h.mock===k);
   return { n:hs.length, best: hs.length? Math.max(...hs.map(h=>h.pct||0)) : null, last: hs.length? hs[0].pct : null };
 }
+function mockPrefs(){ if(!S.mock.prefs) S.mock.prefs={shuffleQ:true, shuffleA:true}; return S.mock.prefs; }
 function startMock(k){
   const qids=[]; MQ.forEach((q,i)=>{ if(q.s===k) qids.push(i); });
   qids.sort((x,y)=>MQ[x].n-MQ[y].n);
-  S.mock.current={ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'mock', mock:k, startedAt: Date.now(), qids, ans:'-'.repeat(qids.length), pos:0, label:'Mock exam '+k };
+  const MP=mockPrefs();
+  if(MP.shuffleQ) shuffle(qids);
+  const perm = MP.shuffleA ? qids.map(qi=>shuffle(MQ[qi].o.map(o=>o.l)).join('')) : null;
+  const tags=[MP.shuffleQ?'questions mélangées':'', MP.shuffleA?'réponses mélangées':''].filter(Boolean).join(', ');
+  S.mock.current={ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'mock', mock:k, startedAt: Date.now(), qids, perm, ans:'-'.repeat(qids.length), pos:0, label:'Mock exam '+k+(tags?' · '+tags:'') };
   reviewing=false; navFilter='all'; view='quiz'; save(); render(); window.scrollTo(0,0);
 }
 function renderMockHome(){
@@ -688,7 +699,7 @@ function renderMockHome(){
   <section class="hero">
     <span class="eyebrow">Examens blancs · Securities</span>
     <h1>Practice <em>mock exams</em></h1>
-    <p>${MOCKS.length} examens de ${MQ.filter(q=>q.s===MOCKS[0]).length} questions, dans l'ordre du fichier, avec correction et explication après chaque réponse. Un seul mock à la fois : termine celui en cours avant d'en commencer un autre.</p>
+    <p>${MOCKS.length} examens de ${MQ.filter(q=>q.s===MOCKS[0]).length} questions, avec correction et explication après chaque réponse. Tu peux mélanger l'ordre des questions et des réponses pour ne pas les apprendre par cœur. Un seul mock à la fois : termine celui en cours avant d'en commencer un autre.</p>
   </section>
   ${cur ? `<div class="card resume">
     <div class="txt"><span class="eyebrow">Mock en cours</span>
@@ -696,6 +707,13 @@ function renderMockHome(){
       <p>Commencé le ${fmtDate(cur.startedAt)} · reprise à la question ${cur.pos+1}</p></div>
     <div class="acts"><button class="btn primary" id="resumeBtn">Reprendre</button><button class="btn ghost" id="finishCur">Terminer et enregistrer</button></div>
   </div>`:''}
+  <div class="card mock-opts">
+    <div><span class="eyebrow">Options de l'examen</span><p class="hint">S'appliquent au prochain mock que tu lances${cur?' (le mock en cours garde son ordre)':''}.</p></div>
+    <div class="seg">
+      <button class="chip" id="shQ" aria-pressed="${mockPrefs().shuffleQ}">Mélanger les questions</button>
+      <button class="chip" id="shA" aria-pressed="${mockPrefs().shuffleA}">Mélanger les réponses A–D</button>
+    </div>
+  </div>
   <div class="mocks">
     ${MOCKS.map(k=>{ const ms=mockStats(k); const live=cur && cur.mock===k; const locked=cur && !live;
       const n=MQ.filter(q=>q.s===k).length;
@@ -718,6 +736,8 @@ function renderMockHome(){
     ${hist.map(h=>`<tr><td>Mock ${h.mock}</td><td>${fmtDate(h.date)}</td><td>${h.answered} / ${h.total}</td><td>${h.correct}</td><td>${fmtDur(h.dur)}</td><td class="sc"><span class="pill ${pillCls(h.pct)}">${h.pct==null?'–':h.pct+'%'}</span></td></tr>`).join('')}
     </tbody></table></div>` : `<div class="hist-empty">Aucun mock terminé pour l'instant. Ton score s'enregistre ici à la fin de chaque mock.</div>`}
   </section>`;
+  $('#shQ').onclick=()=>{ mockPrefs().shuffleQ=!mockPrefs().shuffleQ; save(); renderMockHome(); };
+  $('#shA').onclick=()=>{ mockPrefs().shuffleA=!mockPrefs().shuffleA; save(); renderMockHome(); };
   app.querySelectorAll('[data-mock]').forEach(b=>b.onclick=()=>{ const k=+b.dataset.mock;
     if(cur && cur.mock===k){ view='quiz'; navFilter='all'; render(); window.scrollTo(0,0); }
     else if(!cur) startMock(k); });
@@ -729,8 +749,9 @@ document.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
   const k=e.key.toUpperCase(); const map={'1':'A','2':'B','3':'C','4':'D'};
   const a=att(); if(!a) return;
-  if('ABCD'.includes(k) && k.length===1){ choose(k); }
-  else if(map[k]) choose(map[k]);
+  const toOrig = L => { const q=bank(a)[a.qids[a.pos]]; return optOrder(a,a.pos,q)['ABCD'.indexOf(L)]; };
+  if('ABCD'.includes(k) && k.length===1){ choose(toOrig(k)); }
+  else if(map[k]) choose(toOrig(map[k]));
   else if(e.key==='ArrowRight'){ go(a.pos+1); }
   else if(e.key==='ArrowLeft'){ go(a.pos-1); }
 });
